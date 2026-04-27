@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+sessions/
+*.csv
+*.xlsx
+*.pdf
+*.docx
+~$*
+*.log
+_audit_testdata/
+dist/
+build/
+.env
+.venv/
+venv/

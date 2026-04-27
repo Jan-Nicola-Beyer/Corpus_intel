@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Corpus Intel — Research Corpus Platform">
+    <title>Corpus Intel – Research Corpus Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.4/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.4/styles/ag-theme-alpine.css">
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.4/dist/ag-grid-community.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="brand">
+                <img src="/static/logos/isd-logo.png" alt="ISD Logo" class="brand-logo">
+                <h2>Corpus Intel</h2>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#" data-page="home"      class="active"><i class="fa-solid fa-house"></i> <span>Home</span></a></li>
+                <li><a href="#" data-page="import"><i class="fa-solid fa-cloud-arrow-up"></i> <span>Import</span></a></li>
+                <li><a href="#" data-page="corpus"><i class="fa-solid fa-database"></i> <span>Corpus</span></a></li>
+                <li><a href="#" data-page="slicer"><i class="fa-solid fa-filter"></i> <span>Slicer</span></a></li>
+                <li><a href="#" data-page="codebook"><i class="fa-solid fa-book"></i> <span>Codebook</span></a></li>
+                <li><a href="#" data-page="ai-coding"><i class="fa-solid fa-robot"></i> <span>AI Coding</span></a></li>
+                <li><a href="#" data-page="topics"><i class="fa-solid fa-sitemap"></i> <span>Topics</span></a></li>
+                <li><a href="#" data-page="analytics"><i class="fa-solid fa-chart-column"></i> <span>Analytics</span></a></li>
+                <li><a href="#" data-page="export"><i class="fa-solid fa-file-export"></i> <span>Export</span></a></li>
+                <li style="margin-top:auto;"><a href="#" data-page="settings"><i class="fa-solid fa-gear"></i> <span>Settings</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <span id="build-status">v0.1 · preview</span>
+            </div>
+        </nav>
+
+        <div id="command-palette" class="command-palette" hidden>
+            <div class="command-palette-mask"></div>
+            <div class="command-palette-window" role="dialog" aria-modal="true">
+                <input id="command-palette-input" type="text" placeholder="Type a command or page — Esc to close" autocomplete="off">
+                <ul id="command-palette-list" class="command-palette-list"></ul>
+                <div class="command-palette-hint">Press ⇅ to move · ↵ to run · Esc to close · Ctrl+K to re-open</div>
+            </div>
+        </div>
+
+        <div id="jobs-indicator" class="jobs-indicator" hidden>
+            <div class="jobs-indicator-inner">
+                <i class="fa-solid fa-gears fa-spin"></i>
+                <span id="jobs-indicator-label">No jobs</span>
+                <div class="jobs-indicator-bar"><span id="jobs-indicator-fill"></span></div>
+                <button id="jobs-indicator-cancel" class="btn-secondary small" title="Cancel running job">Cancel</button>
+            </div>
+        </div>
+
+        <div id="status-dock" class="status-dock">
+            <button id="ai-health-pill" class="status-pill" type="button" title="AI reachability — click to refresh" hidden>
+                <span class="status-dot"></span>
+                <span class="status-pill-label">AI</span>
+                <span class="status-pill-value" id="ai-health-text">checking…</span>
+            </button>
+            <button id="budget-pill" class="status-pill" type="button" title="Monthly AI spend — click for Settings" hidden>
+                <i class="fa-solid fa-coins" aria-hidden="true"></i>
+                <span class="status-pill-label">Budget</span>
+                <span class="status-pill-value" id="budget-pill-value">—</span>
+                <span class="status-pill-bar"><span id="budget-pill-fill"></span></span>
+            </button>
+        </div>
+
+        <div id="tour-modal" class="decision-modal" hidden>
+            <div class="decision-modal-mask" data-tour-close="1"></div>
+            <div class="decision-modal-window" role="dialog" aria-modal="true" aria-labelledby="tour-modal-title">
+                <header class="decision-modal-head">
+                    <i class="fa-solid fa-route" aria-hidden="true"></i>
+                    <h3 id="tour-modal-title">Tour</h3>
+                </header>
+                <div class="decision-modal-body">
+                    <p id="tour-modal-body-text" class="decision-why"></p>
+                    <p id="tour-modal-step" class="muted small"></p>
+                </div>
+                <footer class="decision-modal-foot">
+                    <button type="button" class="btn-ghost" data-tour-close="1">Close</button>
+                    <button type="button" class="btn-ghost" id="tour-prev"><i class="fa-solid fa-chevron-left"></i> Back</button>
+                    <button type="button" id="tour-next" class="btn-primary">Next <i class="fa-solid fa-chevron-right"></i></button>
+                </footer>
+            </div>
+        </div>
+
+        <div id="decision-modal" class="decision-modal" hidden>
+            <div class="decision-modal-mask" data-close="1"></div>
+            <div class="decision-modal-window" role="dialog" aria-modal="true" aria-labelledby="decision-modal-title">
+                <header class="decision-modal-head">
+                    <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
+                    <h3 id="decision-modal-title">Decision</h3>
+                </header>
+                <div class="decision-modal-body">
+                    <p id="decision-modal-why" class="decision-why"></p>
+                    <ul id="decision-modal-tradeoffs" class="decision-tradeoffs"></ul>
+                    <div id="decision-modal-meta" class="decision-meta"></div>
+                </div>
+                <footer class="decision-modal-foot">
+                    <button type="button" class="btn-ghost" data-close="1">Cancel</button>
+                    <button type="button" id="decision-modal-ok" class="btn-primary">Continue</button>
+                </footer>
+            </div>
+        </div>
+
+        <main class="main-content" id="main-scroll">
+
+            <!-- ── HOME ────────────────────────────────────────────────── -->
+            <section id="page-home" class="page active">
+                <div class="header-section">
+                    <h1>Corpus Intel</h1>
+                    <p>A lightweight research workstation for building, cleaning, coding, and analyzing social-media corpora. Bring exports from Brandwatch, Twitter/X, Meta, TikTok, YouTube, Reddit, Mastodon, news APIs, or any CSV. Output: tagged datasets, topic models, analytics, reproducibility logs.</p>
+                </div>
+                <div class="line-draw"></div>
+
+                <!-- Take-a-tour CTA (first-time onboarding) -->
+                <div id="home-tour-cta" class="glass-card" style="display:flex; align-items:center; gap:0.9rem; padding:0.85rem 1.1rem; margin-bottom:1rem;">
+                    <i class="fa-solid fa-route" style="color:var(--isd-pink); font-size:1.4rem;"></i>
+                    <div style="flex:1;">
+                        <strong>New here? Take the 60-second tour.</strong>
+                        <div class="muted small">Six steps: Import → Build → Code → Discover → Analyse → Report. You can close it any time.</div>
+                    </div>
+                    <button id="home-tour-start" class="btn-primary btn-sm" type="button"><i class="fa-solid fa-play"></i> Start tour</button>
+                    <button id="home-tour-dismiss" class="btn-ghost btn-sm" type="button" title="Hide this CTA">Dismiss</button>
+                </div>
+
+                <!-- Resume-session banner (shown only when there is prior work) -->
+                <div id="home-resume-banner" class="resume-banner" hidden>
+                    <div class="resume-banner-body">
+                        <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+                        <div>
+                            <strong>Welcome back.</strong>
+                            <span id="home-resume-summary" class="small muted"></span>
+                        </div>
+                    </div>
+                    <div class="resume-banner-actions">
+                        <button id="btn-resume-continue" class="btn-primary btn-sm">Continue</button>
+                        <button id="btn-resume-fresh" class="btn-ghost btn-sm" title="Wipe the session and start from scratch — destructive"><i class="fa-solid fa-trash-can"></i> Start fresh</button>
+                        <button id="btn-resume-dismiss" class="btn-ghost btn-sm" title="Hide this banner for the current tab — keeps all work">Hide banner</button>
+                    </div>
+                </div>
+
+                <!-- Goal picker -->
+                <div class="glass-card" id="home-goal-card">
+                    <h3 style="margin-bottom:0.4rem;">What are you here to do?</h3>
+                    <p class="muted small" style="margin-bottom:1rem;">Pick a goal and Corpus Intel will walk you through the right steps. You can switch later.</p>
+                    <div class="goal-grid" id="home-goal-grid">
+                        <button type="button" class="goal-card" data-goal="build">
+                            <i class="fa-solid fa-database"></i>
+                            <span class="goal-title">Build a new corpus</span>
+                            <span class="muted small">Upload raw exports from social platforms, clean them up, and combine into one dataset ready for analysis.</span>
+                        </button>
+                        <button type="button" class="goal-card" data-goal="code">
+                            <i class="fa-solid fa-tags"></i>
+                            <span class="goal-title">Code existing data</span>
+                            <span class="muted small">Tag rows against your codebook (manually or with AI help) and measure inter-coder agreement.</span>
+                        </button>
+                        <button type="button" class="goal-card" data-goal="explore">
+                            <i class="fa-solid fa-compass"></i>
+                            <span class="goal-title">Explore themes</span>
+                            <span class="muted small">Discover topics with AI-assisted clustering, chart trends over time, and slice by audience.</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progression cards -->
+                <div class="cards-grid three mt-2">
+                    <div class="glass-card">
+                        <h3><i class="fa-solid fa-cloud-arrow-up" style="color:var(--isd-pink); margin-right:0.5rem;"></i>1 · Import your files</h3>
+                        <p class="muted small mt-1">Upload CSV or XLSX exports. Corpus Intel recognises the data source and matches its columns to a shared set of standard names.</p>
+                    </div>
+                    <div class="glass-card">
+                        <h3><i class="fa-solid fa-database" style="color:var(--isd-pink); margin-right:0.5rem;"></i>2 · Build a corpus</h3>
+                        <p class="muted small mt-1">Combine datasets into one working corpus, remove duplicates, and filter by text, language, platform or date.</p>
+                    </div>
+                    <div class="glass-card">
+                        <h3><i class="fa-solid fa-file-export" style="color:var(--isd-pink); margin-right:0.5rem;"></i>3 · Code, analyse, export</h3>
+                        <p class="muted small mt-1">Tag rows against a codebook, discover topics, chart trends, and export a reproducible research bundle.</p>
+                    </div>
+                </div>
+
+                <!-- Next-step status card -->
+                <div class="glass-card mt-2">
+                    <div class="phase-stub">
+                        <span class="stub-tag" id="home-step-tag">Getting started</span>
+                        <p id="home-step-body">Head to <strong>Import</strong> to bring in a dataset.</p>
+                        <p id="home-session-line" class="small muted"></p>
+                        <div class="mt-2" id="home-step-cta" hidden>
+                            <button id="btn-home-next" class="btn-primary btn-sm">Take me there</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── IMPORT ──────────────────────────────────────────────── -->
+            <section id="page-import" class="page">
+                <div class="header-section">
+                    <h1>Import</h1>
+                    <p>Upload a dataset, check the detected source, and match its columns to a shared set of standard names. AI can suggest a mapping when the automatic detection is unsure.</p>
+                </div>
+                <div class="line-draw"></div>
+
+                <!-- Upload card -->
+                <div class="glass-card">
+                    <h2>Upload a dataset</h2>
+                    <p class="muted small mt-1">CSV, TSV, XLSX, JSON, or JSONL. Corpus Intel will recognise the data source (e.g. Brandwatch, Meta, TikTok) and propose a column mapping you can review.</p>
+                    <div id="drop-zone" class="drop-zone mt-2">
+                        <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+                        <h3>Start here: Drop an export file, or click to browse</h3>
+                        <p class="muted small" id="drop-hint">Max 200 MB · extensions: .csv .tsv .xlsx .json .jsonl</p>
+                        <input type="file" id="file-input" hidden accept=".csv,.tsv,.txt,.xlsx,.xls,.json,.jsonl,.ndjson">
+                    </div>
+                    <div class="flex-row mt-2">
+                        <div class="loader" id="upload-loader"></div>
+                        <span id="upload-status" class="small muted"></span>
+                    </div>
+                </div>
+
+                <!-- Dataset list -->
+                <div class="glass-card mt-2">
+                    <div class="flex-row" style="justify-content:space-between;">
+                        <div>
+                            <h2>Datasets</h2>
+                            <p class="muted small mt-1" id="dataset-summary">No datasets uploaded yet.</p>
+                        </div>
+                    </div>
+                    <div id="dataset-list" class="mt-2"></div>
+                </div>
+
+                <!-- Active mapping editor -->
+                <div id="mapping-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem;">
+                        <div style="flex:1; min-width:240px;">
+                            <h2 id="mapping-title">Column mapping</h2>
+                            <p class="muted small mt-1" id="mapping-subtitle"></p>
+                        </div>
+                        <div class="flex-row">
+                            <label class="small muted" style="margin-bottom:0;" for="source-picker">Detected as:</label>
+                            <select id="source-picker" style="width:auto; min-width:180px;"></select>
+                            <button id="btn-ai-suggest" class="btn-secondary">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Suggest with AI
+                            </button>
+                            <button id="btn-save-mapping" class="btn-primary">
+                                <i class="fa-solid fa-check"></i> Save mapping
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="quality-flags" class="mt-2"></div>
+
+                    <div style="overflow-x:auto; margin-top:1rem;">
+                        <table class="data-table" id="mapping-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:28%;">Column in your file</th>
+                                    <th style="width:24%;">Sample value</th>
+                                    <th style="width:24%;">Maps to</th>
+                                    <th style="width:12%;">Confidence <i class="hint-trigger" data-hint="source-confidence" tabindex="0" title="What does confidence mean here?">i</i></th>
+                                    <th style="width:12%;">How matched</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mapping-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── CORPUS ──────────────────────────────────────────────── -->
+            <section id="page-corpus" class="page">
+                <div class="header-section">
+                    <h1>Corpus</h1>
+                    <p>Combine your uploaded datasets into a single working corpus, remove duplicate rows, and filter by text, language, platform, or date. Click any row to inspect every field.</p>
+                </div>
+                <div class="line-draw"></div>
+
+                <!-- Empty state: no datasets imported yet -->
+                <div id="corpus-empty-card" class="glass-card" style="display:none;">
+                    <div class="phase-stub">
+                        <span class="stub-tag">Nothing to combine yet</span>
+                        <p>You need at least one dataset before you can build a corpus. Head to <strong>Import</strong> to upload a CSV or XLSX file.</p>
+                    </div>
+                </div>
+
+                <!-- Dataset picker (shown when corpus is not yet built, or on Rebuild) -->
+                <div id="corpus-picker-card" class="glass-card" style="display:none;">
+                    <h2 id="corpus-picker-title">Build your corpus</h2>
+                    <p class="muted small mt-1" id="corpus-picker-subtitle">Pick the datasets you want to combine. They will be merged using their saved column mappings.</p>
+                    <div id="corpus-picker-list" class="mt-2"></div>
+
+                    <div class="flex-row mt-2" style="justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem;">
+                        <label class="flex-row small" style="margin-bottom:0; gap:0.5rem; font-weight:500; color:var(--text-main);">
+                            <input type="checkbox" id="corpus-dedupe-near" checked style="width:auto;">
+                            <span>Also remove near-duplicate rows by normalized text <span class="muted">(recommended)</span></span>
+                        </label>
+                        <div class="flex-row">
+                            <button id="btn-cancel-rebuild" class="btn-secondary" style="display:none;">Cancel</button>
+                            <button id="btn-build-corpus" class="btn-primary">
+                                <i class="fa-solid fa-layer-group"></i> <span id="btn-build-corpus-label">Build corpus</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex-row mt-2">
+                        <div class="loader" id="corpus-build-loader"></div>
+                        <span id="corpus-build-status" class="small muted"></span>
+                    </div>
+                </div>
+
+                <!-- Summary + controls (shown once corpus is built) -->
+                <div id="corpus-summary-card" class="glass-card" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem;">
+                        <div style="flex:1; min-width:240px;">
+                            <h2>Working corpus</h2>
+                            <p class="muted small mt-1" id="corpus-summary-line"></p>
+                        </div>
+                        <div class="flex-row">
+                            <button id="btn-rebuild-corpus" class="btn-secondary"><i class="fa-solid fa-rotate"></i> Rebuild</button>
+                            <button id="btn-clear-corpus" class="btn-secondary btn-danger" title="Clear the corpus (your uploaded datasets stay)"><i class="fa-solid fa-trash"></i> Clear</button>
+                        </div>
+                    </div>
+                    <div class="corpus-stats-grid mt-2" id="corpus-stats-grid"></div>
+                    <div id="corpus-snapshots-panel" class="mt-2" style="display:none;">
+                        <div class="flex-row" style="justify-content:space-between; align-items:center; gap:0.5rem;">
+                            <div>
+                                <strong style="font-size:0.95rem;">Snapshots</strong>
+                                <span class="muted small" style="margin-left:0.5rem;">Each rebuild creates a new, immutable snapshot — switch between them any time.</span>
+                            </div>
+                            <div class="flex-row" style="gap:0.5rem;">
+                                <select id="snapshot-picker" class="input-field" style="min-width:240px;"></select>
+                                <button id="btn-activate-snapshot" class="btn-secondary" title="Load this snapshot as the working corpus">
+                                    <i class="fa-solid fa-rotate-right"></i> Activate
+                                </button>
+                                <button id="btn-delete-snapshot" class="btn-secondary btn-danger" title="Delete the selected snapshot (active one is protected)">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter panel -->
+                <div id="corpus-filter-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center;">
+                        <h2>Filters</h2>
+                        <div class="flex-row" style="gap:0.5rem;">
+                            <button id="btn-export-corpus-csv" class="btn-secondary" title="Download current filtered + sorted view as CSV">
+                                <i class="fa-solid fa-file-csv"></i> Export CSV
+                            </button>
+                            <button id="btn-reset-filters" class="btn-secondary">
+                                <i class="fa-solid fa-rotate-left"></i> Reset filters
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-2 filter-grid">
+                        <div style="flex:2; min-width:240px;">
+                            <label for="f-text">Search in text</label>
+                            <input id="f-text" type="text" placeholder="e.g. climate, &quot;exact phrase&quot;, or a pattern">
+                        </div>
+                        <div class="flex-row" style="gap:1rem; align-self:flex-end; padding-bottom:0.45rem;">
+                            <label class="flex-row small" style="margin-bottom:0; gap:0.4rem; color:var(--text-main); font-weight:500;">
+                                <input type="checkbox" id="f-regex" style="width:auto;">
+                                <span>Regex</span>
+                                <i class="hint-trigger" data-hint="regex-search" tabindex="0" title="What is regex search?">i</i>
+                            </label>
+                            <label class="flex-row small" style="margin-bottom:0; gap:0.4rem; color:var(--text-main); font-weight:500;">
+                                <input type="checkbox" id="f-case" style="width:auto;">
+                                <span>Match case</span>
+                                <i class="hint-trigger" data-hint="match-case" tabindex="0" title="What does match case mean?">i</i>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mt-2 filter-grid">
+                        <div style="flex:1; min-width:200px;">
+                            <label for="f-date-from">Published on or after</label>
+                            <input id="f-date-from" type="date">
+                        </div>
+                        <div style="flex:1; min-width:200px;">
+                            <label for="f-date-to">Published on or before</label>
+                            <input id="f-date-to" type="date">
+                        </div>
+                        <div class="small muted" id="f-date-hint" style="align-self:flex-end; padding-bottom:0.7rem;"></div>
+                    </div>
+
+                    <div id="f-chip-groups" class="mt-2"></div>
+
+                    <div class="mt-2">
+                        <div class="small muted mb-1">Engagement thresholds (inclusive, blank = no bound)</div>
+                        <div class="filter-grid" id="f-engagement-grid">
+                            <div style="flex:1; min-width:170px;">
+                                <label class="small">Min likes</label>
+                                <input id="f-like-min" type="number" min="0" step="1" placeholder="e.g. 100">
+                            </div>
+                            <div style="flex:1; min-width:170px;">
+                                <label class="small">Min shares</label>
+                                <input id="f-share-min" type="number" min="0" step="1" placeholder="e.g. 50">
+                            </div>
+                            <div style="flex:1; min-width:170px;">
+                                <label class="small">Min comments</label>
+                                <input id="f-comment-min" type="number" min="0" step="1">
+                            </div>
+                            <div style="flex:1; min-width:170px;">
+                                <label class="small">Min views</label>
+                                <input id="f-view-min" type="number" min="0" step="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results table -->
+                <div id="corpus-results-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                        <div>
+                            <h2 id="corpus-results-title">Rows</h2>
+                            <p class="muted small mt-1" id="corpus-results-subtitle"></p>
+                        </div>
+                        <div class="flex-row" style="gap: 1rem; align-items:center;">
+                            <div class="view-toggles" style="display:flex; gap:0.25rem; background: rgba(0,0,0,0.04); padding: 0.25rem; border-radius:8px;">
+                                <button class="btn-icon active" id="btn-view-grid" title="Grid View" style="border:none; background:white; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border-radius:6px; padding:0.4rem 0.6rem; cursor:pointer;"><i class="fa-solid fa-table" style="color:var(--isd-blue);"></i></button>
+                                <button class="btn-icon" id="btn-view-gallery" title="Gallery View" style="border:none; background:transparent; border-radius:6px; padding:0.4rem 0.6rem; cursor:pointer;"><i class="fa-solid fa-border-all" style="color:var(--text-muted);"></i></button>
+                            </div>
+                            <div class="flex-row" id="corpus-pagination"></div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:1rem; height: 60vh; position: relative;">
+                        <div id="corpus-grid" class="ag-theme-alpine" style="height: 100%; width: 100%;"></div>
+                        <div id="corpus-gallery" class="masonry-gallery" style="display:none; height: 100%; overflow-y: auto; padding-right: 0.5rem; padding-bottom: 2rem;"></div>
+                    </div>
+
+                    <div class="flex-row mt-2" style="justify-content:center; min-height:22px;">
+                        <div class="loader" id="corpus-filter-loader"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── SLICER ──────────────────────────────────────────────── -->
+            <section id="page-slicer" class="page">
+                <div class="header-section">
+                    <h1>Slicer</h1>
+                    <p>Carve the corpus into named subsets. Build them with a boolean query, draw a random or stratified sample, split the corpus into equal chunks for parallel coding, or combine two existing slices with set operations.</p>
+                </div>
+                <div class="line-draw"></div>
+
+                <!-- Empty state when no corpus has been built yet -->
+                <div id="slicer-empty-card" class="glass-card" style="display:none;">
+                    <div class="phase-stub">
+                        <span class="stub-tag">Build a corpus first</span>
+                        <p>The slicer runs boolean queries against the merged corpus text column. Head to <strong>Corpus</strong>, pick your datasets and click <em>Build corpus</em> — then come back here.</p>
+                        <div class="mt-2">
+                            <button class="btn-secondary" id="btn-slicer-go-corpus">
+                                <i class="fa-solid fa-arrow-right"></i> Go to Corpus
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Query builder -->
+                <div id="slicer-builder-card" class="glass-card" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2>Boolean query <i class="hint-trigger" data-hint="boolean-query" tabindex="0" title="What is a boolean query?">i</i></h2>
+                        <span class="muted small" id="slicer-corpus-tag"></span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem; margin-top: 0.5rem;">
+                        <label class="small muted" style="cursor:pointer; user-select:none;">
+                            <input type="checkbox" id="vqb-toggle" style="margin-right:0.2rem;"> Use visual builder
+                        </label>
+                    </div>
+                    <div id="vqb-root" class="vqb-root" style="display:none;"></div>
+                    <textarea id="slicer-query-input"
+                              rows="3"
+                              spellcheck="false"
+                              placeholder='e.g.  ("hate speech" OR hass*) AND NOT test'></textarea>
+                    <div class="slicer-toolbar">
+                        <button class="btn-primary" id="btn-slicer-run">
+                            <i class="fa-solid fa-play"></i> Run preview
+                        </button>
+                        <button class="btn-secondary" id="btn-slicer-clear-query">
+                            <i class="fa-solid fa-eraser"></i> Clear
+                        </button>
+                        <span id="slicer-status" class="muted small"></span>
+                    </div>
+                    <details class="slicer-help">
+                        <summary>Syntax guide</summary>
+                        <div class="slicer-help-body">
+                            <ul>
+                                <li><code>AND</code> / <code>OR</code> / <code>NOT</code> — operators are case-insensitive</li>
+                                <li><code>"exact phrase"</code> — match a literal phrase</li>
+                                <li><code>climat*</code> — wildcard: matches climate, climatic, climatology…</li>
+                                <li><code>(A OR B) AND C</code> — parentheses for grouping</li>
+                                <li>Adjacent words without an operator are treated as implicit AND</li>
+                            </ul>
+                            <p class="small mt-1"><strong>Column-targeted terms</strong> — <code>field:value</code>:</p>
+                            <ul>
+                                <li><code>author:</code> / <code>handle:</code> / <code>name:</code> — author fields (word match)</li>
+                                <li><code>url:</code> / <code>link:</code> — URL substring</li>
+                                <li><code>hashtag:</code> / <code>tag:</code> — hashtags column</li>
+                                <li><code>lang:</code> / <code>language:</code> — exact code (e.g. <code>lang:de</code>)</li>
+                                <li><code>country:</code> — exact code (e.g. <code>country:DE</code>)</li>
+                                <li><code>platform:</code> — exact (e.g. <code>platform:twitter</code>)</li>
+                                <li><code>source:</code> / <code>dataset:</code> — source_dataset substring</li>
+                                <li><code>id:</code> / <code>post_id:</code> — post_id substring</li>
+                                <li>Quote values with spaces: <code>author:"Greta Thunberg"</code></li>
+                            </ul>
+                            <p class="muted small mt-1">Examples: <code>climate AND (change OR warming) NOT satire</code> · <code>lang:de AND climate*</code> · <code>author:realdonald AND url:youtube.com</code></p>
+                        </div>
+                    </details>
+                </div>
+
+                <!-- Result panel -->
+                <div id="slicer-result-card" class="glass-card" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem;">
+                        <div style="flex:1; min-width:240px;">
+                            <h2 id="slicer-result-title">Preview</h2>
+                            <p class="muted small mt-1" id="slicer-result-subtitle"></p>
+                        </div>
+                        <div class="slicer-save-row">
+                            <input type="text"
+                                   id="slice-name-input"
+                                   class="slice-name-input"
+                                   placeholder="Name this slice (e.g. 'anti-migration posts')"
+                                   maxlength="80" />
+                            <button class="btn-primary" id="btn-slicer-save" disabled>
+                                <i class="fa-solid fa-floppy-disk"></i> Save slice
+                            </button>
+                        </div>
+                    </div>
+                    <div id="slicer-result-table-wrap" class="mt-2">
+                        <table id="slicer-result-table"></table>
+                    </div>
+                    <div id="slicer-result-pagination"></div>
+                </div>
+
+                <!-- Sample & split -->
+                <div id="slicer-sample-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2>Sample &amp; split</h2>
+                        <span class="muted small">For manual coding pilots, IRR splits, engagement analysis</span>
+                    </div>
+
+                    <div class="sample-tabs mt-2" role="tablist">
+                        <button class="sample-tab active" data-sample-method="random"     role="tab">Random sample</button>
+                        <button class="sample-tab"        data-sample-method="stratified" role="tab">Stratified <i class="hint-trigger" data-hint="stratified" tabindex="0" title="What is stratified sampling?">i</i></button>
+                        <button class="sample-tab"        data-sample-method="top_n"      role="tab">Top by metric</button>
+                        <button class="sample-tab"        data-sample-method="systematic" role="tab">Every Nth <i class="hint-trigger" data-hint="systematic" tabindex="0" title="What is systematic sampling?">i</i></button>
+                        <button class="sample-tab"        data-sample-method="split"      role="tab">Equal chunks</button>
+                    </div>
+
+                    <p class="muted small mt-1" id="sample-tab-help"></p>
+
+                    <div class="sample-controls mt-2" id="sample-controls">
+                        <!-- common: base query + dedupe -->
+                        <div class="sample-row">
+                            <label class="sample-label">
+                                Base filter (optional boolean query) <i class="hint-trigger" data-hint="base-query" tabindex="0" title="What is a base filter?">i</i>
+                                <input type="text" id="sample-base-query" placeholder='e.g.  "hate speech" OR hass*' />
+                            </label>
+                        </div>
+
+                        <div class="sample-row sample-grid">
+                            <label class="sample-label" id="sample-n-wrap">
+                                Rows to sample
+                                <input type="number" id="sample-n" min="1" max="100000" step="1" value="200" />
+                            </label>
+                            <label class="sample-label" id="sample-seed-wrap">
+                                Random seed
+                                <input type="number" id="sample-seed" value="42" />
+                            </label>
+                            <label class="sample-label" id="sample-bycol-wrap" style="display:none;">
+                                <span id="sample-bycol-label">Stratify by column</span>
+                                <select id="sample-by-col"></select>
+                            </label>
+                            <label class="sample-label" id="sample-dir-wrap" style="display:none;">
+                                Direction
+                                <select id="sample-ascending">
+                                    <option value="false">Largest first (descending)</option>
+                                    <option value="true">Smallest first (ascending)</option>
+                                </select>
+                            </label>
+                            <label class="sample-label" id="sample-step-wrap" style="display:none;">
+                                Step (every Nth row)
+                                <input type="number" id="sample-step" min="2" max="10000" step="1" value="10" />
+                            </label>
+                            <label class="sample-label" id="split-k-wrap" style="display:none;">
+                                Number of chunks (K)
+                                <input type="number" id="split-k" min="2" max="20" value="2" />
+                            </label>
+                            <label class="sample-label" id="split-overlap-wrap" style="display:none;">
+                                Shared rows across chunks (%) <i class="hint-trigger" data-hint="irr-overlap" tabindex="0" title="What is IRR overlap?">i</i>
+                                <input type="number" id="split-overlap" min="0" max="50" step="1" value="0" />
+                            </label>
+                        </div>
+
+                        <div class="sample-row" id="sample-dedupe-wrap">
+                            <label class="sample-label inline">
+                                <input type="checkbox" id="sample-dedupe" />
+                                Drop <span data-hint="near-duplicate" style="border-bottom:1px dotted var(--border-color); cursor:help;">near-duplicate</span> text before sampling
+                            </label>
+                        </div>
+
+                        <div class="slicer-toolbar mt-1">
+                            <button class="btn-primary" id="btn-sample-preview">
+                                <i class="fa-solid fa-eye"></i> Preview
+                            </button>
+                            <button class="btn-secondary" id="btn-sample-reset">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
+                            <span id="sample-status" class="muted small"></span>
+                        </div>
+                    </div>
+
+                    <div id="sample-result-wrap" class="mt-2" style="display:none;">
+                        <div class="flex-row" style="justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem;">
+                            <div style="flex:1; min-width:220px;">
+                                <h3 id="sample-result-title">Preview</h3>
+                                <p class="muted small mt-1" id="sample-result-subtitle"></p>
+                            </div>
+                            <div class="slicer-save-row" id="sample-save-row">
+                                <input type="text"
+                                       id="sample-name-input"
+                                       class="slice-name-input"
+                                       placeholder="Name this sample (e.g. 'Coding pilot 200')"
+                                       maxlength="80" />
+                                <button class="btn-primary" id="btn-sample-save">
+                                    <i class="fa-solid fa-floppy-disk"></i> Save as slice
+                                </button>
+                            </div>
+                            <div class="slicer-save-row" id="split-save-row" style="display:none;">
+                                <input type="text"
+                                       id="split-prefix-input"
+                                       class="slice-name-input"
+                                       placeholder="Name prefix (e.g. 'batch')"
+                                       maxlength="60" />
+                                <button class="btn-primary" id="btn-split-save">
+                                    <i class="fa-solid fa-object-group"></i> Save all K chunks
+                                </button>
+                            </div>
+                        </div>
+                        <div id="sample-result-table-wrap" class="mt-2">
+                            <table id="sample-result-table"></table>
+                        </div>
+                        <div id="sample-result-pagination"></div>
+                    </div>
+                </div>
+
+                <!-- Saved slices list -->
+                <div id="slicer-saved-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center;">
+                        <h2>Saved slices</h2>
+                        <span class="muted small" id="slicer-saved-count"></span>
+                    </div>
+                    <div id="slicer-saved-list" class="mt-2"></div>
+                </div>
+
+                <!-- Diff panel (appears once 2+ slices are saved) -->
+                <div id="slicer-diff-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                        <h2>Compare &amp; combine</h2>
+                        <span class="muted small">Set operations across the current corpus — save any result as a new slice</span>
+                    </div>
+                    <div class="slicer-diff-grid">
+                        <div>
+                            <label class="small">Slice A</label>
+                            <select id="slicer-diff-a"></select>
+                        </div>
+                        <div>
+                            <label class="small">Slice B</label>
+                            <select id="slicer-diff-b"></select>
+                        </div>
+                        <div class="slicer-diff-actions">
+                            <button class="btn-secondary" id="btn-slicer-diff">
+                                <i class="fa-solid fa-circle-half-stroke"></i> Compare
+                            </button>
+                        </div>
+                    </div>
+                    <div id="slicer-diff-result" class="mt-2"></div>
+                </div>
+            </section>
+
+            <!-- ── CODEBOOK ────────────────────────────────────────────── -->
+            <section id="page-codebook" class="page">
+                <div class="header-section">
+                    <h1>Codebook &amp; Coding</h1>
+                    <p>Define your own categories, tag rows one-by-one with keyboard shortcuts, and check how reliably two people agree when they code the same rows.</p>
+                </div>
+                <div class="line-draw"></div>
+
+                <!-- No-coder banner -->
+                <div id="cb-coder-banner" class="glass-card" style="display:none;">
+                    <div class="phase-stub">
+                        <span class="stub-tag">Sign in as a coder</span>
+                        <p>Every tag is stamped with the coder who placed it — so before you can code, you need to set your name in <strong>Settings</strong>. This is what makes inter-coder agreement possible.</p>
+                        <div class="mt-2">
+                            <button class="btn-secondary" id="btn-cb-go-settings">
+                                <i class="fa-solid fa-arrow-right"></i> Open Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty state: no codebooks yet -->
+                <div id="cb-empty-card" class="glass-card" style="display:none;">
+                    <div class="phase-stub">
+                        <span class="stub-tag">Start with a codebook</span>
+                        <p>A codebook is the set of categories you will tag rows with (e.g. <em>hate speech, harassment, misinformation, legitimate</em>). Use the starter preset to get moving, or create your own from scratch.</p>
+                    </div>
+                    <div class="flex-row mt-2" style="flex-wrap:wrap; gap:0.6rem;">
+                        <button class="btn-primary" id="btn-cb-preset">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Use hate-speech starter
+                        </button>
+                        <button class="btn-secondary" id="btn-cb-new-empty">
+                            <i class="fa-solid fa-plus"></i> Create empty codebook
+                        </button>
+                        <button class="btn-secondary" id="btn-cb-import-empty">
+                            <i class="fa-solid fa-file-arrow-up"></i> Import JSON
+                        </button>
+                        <input type="file" id="cb-import-file" accept=".json,application/json" style="display:none;" />
+                    </div>
+                </div>
+
+                <!-- Codebooks list + selector -->
+                <div id="cb-list-card" class="glass-card" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2>Your codebooks</h2>
+                        <div class="flex-row" style="gap:0.5rem; flex-wrap:wrap;">
+                            <button class="btn-secondary" id="btn-cb-new">
+                                <i class="fa-solid fa-plus"></i> New
+                            </button>
+                            <button class="btn-secondary" id="btn-cb-import">
+                                <i class="fa-solid fa-file-arrow-up"></i> Import
+                            </button>
+                        </div>
+                    </div>
+                    <div id="cb-list" class="mt-2"></div>
+                </div>
+
+                <!-- Active codebook + categories editor -->
+                <div id="cb-editor-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.6rem;">
+                        <div style="flex:1; min-width:240px;">
+                            <h2 id="cb-editor-title">Active codebook</h2>
+                            <p class="muted small mt-1" id="cb-editor-subtitle"></p>
+                        </div>
+                        <div class="flex-row" style="gap:0.5rem; flex-wrap:wrap;">
+                            <button class="btn-secondary" id="btn-cb-export">
+                                <i class="fa-solid fa-file-arrow-down"></i> Export JSON
+                            </button>
+                            <button class="btn-secondary btn-danger" id="btn-cb-delete">
+                                <i class="fa-solid fa-trash"></i> Delete codebook
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="cb-warnings" class="mt-2"></div>
+
+                    <div class="glass-card mt-2" style="background:rgba(240,248,255,0.5); border-left:4px solid var(--isd-pink); padding:0.7rem 0.95rem;">
+                        <div class="flex-row" style="gap:0.5rem; align-items:center; margin-bottom:0.25rem;">
+                            <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--isd-pink);"></i>
+                            <strong>Descriptions double as AI prompts</strong>
+                            <i class="fa-solid fa-circle-info hint-trigger" data-hint="prompt-hint" title="What is a prompt hint?" style="margin-left:auto;"></i>
+                        </div>
+                        <p class="muted small" style="margin:0;">When you run AI Coding, Claude reads each category's <em>description</em> to decide which rows qualify. Write them like a one-line rubric: concrete criteria, not abstract labels. "Calls for violence against an identity group" works better than "Hate".</p>
+                    </div>
+
+                    <h3 class="mt-2">Categories</h3>
+                    <div id="cb-cat-list" class="mt-1"></div>
+
+                    <h4 class="mt-2">Add a category</h4>
+                    <div class="sample-grid mt-1">
+                        <label class="sample-label">
+                            Title (shown on the button)
+                            <input id="cb-add-title" type="text" maxlength="80" placeholder="e.g. Hate speech" />
+                        </label>
+                        <label class="sample-label">
+                            Shortcut key (a–z, 0–9)
+                            <input id="cb-add-shortcut" type="text" maxlength="1" placeholder="h" />
+                        </label>
+                        <label class="sample-label">
+                            Exclusion group (categories in the same group are mutually exclusive)
+                            <input id="cb-add-group" type="text" maxlength="40" placeholder="e.g. severity" />
+                        </label>
+                        <label class="sample-label">
+                            Button color
+                            <input id="cb-add-color" type="color" value="#C8175D" />
+                        </label>
+                    </div>
+                    <label class="sample-label mt-1" style="display:block;">
+                        Description (tooltip when coding <em>and</em> prompt hint for AI classification)
+                        <textarea id="cb-add-desc" rows="2" maxlength="500" placeholder="What qualifies a row for this category? Be concrete — the AI uses this verbatim."></textarea>
+                    </label>
+                    <div class="slicer-toolbar mt-1">
+                        <button class="btn-primary" id="btn-cb-add-cat">
+                            <i class="fa-solid fa-plus"></i> Add category
+                        </button>
+                        <span id="cb-add-status" class="muted small"></span>
+                    </div>
+                </div>
+
+                <!-- Coding scope picker -->
+                <div id="cb-scope-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2>Coding scope</h2>
+                        <span class="muted small" id="cb-scope-summary"></span>
+                    </div>
+                    <div class="sample-grid mt-2">
+                        <label class="sample-label">
+                            Scope
+                            <select id="cb-scope-select">
+                                <option value="">Whole corpus</option>
+                            </select>
+                        </label>
+                        <label class="sample-label">
+                            Jump to row (row #)
+                            <input id="cb-jump-row" type="number" min="0" step="1" placeholder="e.g. 42" />
+                        </label>
+                    </div>
+                    <div id="cb-progress" class="mt-2"></div>
+                </div>
+
+                <!-- Focus row + category buttons (coding UI) -->
+                <div id="cb-coding-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.6rem;">
+                        <div style="flex:1; min-width:260px;">
+                            <h2 id="cb-focus-title">Row —</h2>
+                            <p class="muted small mt-1" id="cb-focus-subtitle"></p>
+                        </div>
+                        <div class="flex-row" style="gap:0.4rem; flex-wrap:wrap;">
+                            <button class="btn-secondary" id="btn-cb-prev" title="Previous row (←)">
+                                <i class="fa-solid fa-arrow-left"></i> Prev
+                            </button>
+                            <button class="btn-secondary" id="btn-cb-next" title="Next row (→)">
+                                Next <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                            <button class="btn-secondary" id="btn-cb-undo" title="Undo last tag (Ctrl+Z)">
+                                <i class="fa-solid fa-rotate-left"></i> Undo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="cb-focus-body" class="mt-2"></div>
+
+                    <h3 class="mt-2">Tag with category</h3>
+                    <div id="cb-cat-buttons" class="mt-1"></div>
+                    <p class="muted small mt-1">
+                        Keyboard: press a shortcut key to toggle a category. <kbd>←</kbd> / <kbd>→</kbd> move between rows. <kbd>Ctrl+Z</kbd> undoes.
+                    </p>
+
+                    <h4 class="mt-2">Existing tags on this row</h4>
+                    <div id="cb-row-tags" class="mt-1"></div>
+                </div>
+
+                <!-- Bulk tag -->
+                <div id="cb-bulk-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2>Bulk-tag a query</h2>
+                        <span class="muted small">Apply one category to every row matching a boolean query or an existing slice</span>
+                    </div>
+                    <div class="sample-grid mt-2">
+                        <label class="sample-label">
+                            Category
+                            <select id="cb-bulk-cat"></select>
+                        </label>
+                        <label class="sample-label">
+                            Source
+                            <select id="cb-bulk-source">
+                                <option value="query">Boolean query</option>
+                                <option value="slice">Saved slice</option>
+                            </select>
+                        </label>
+                        <label class="sample-label" id="cb-bulk-slice-wrap" style="display:none;">
+                            Slice
+                            <select id="cb-bulk-slice"></select>
+                        </label>
+                    </div>
+                    <label class="sample-label mt-1" id="cb-bulk-query-wrap" style="display:block;">
+                        Boolean query
+                        <input id="cb-bulk-query" type="text" placeholder='e.g.  hass* OR "hate speech"' />
+                    </label>
+                    <div class="slicer-toolbar mt-1">
+                        <button class="btn-secondary" id="btn-cb-bulk-dry">
+                            <i class="fa-solid fa-eye"></i> Count rows
+                        </button>
+                        <button class="btn-primary" id="btn-cb-bulk-apply">
+                            <i class="fa-solid fa-stamp"></i> Apply to all matched rows
+                        </button>
+                        <span id="cb-bulk-status" class="muted small"></span>
+                    </div>
+                </div>
+
+                <!-- IRR panel -->
+                <div id="cb-irr-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2>Inter-coder reliability <i class="hint-trigger" data-hint="irr" tabindex="0" aria-label="What is IRR?" title="What is IRR?">i</i></h2>
+                        <span class="muted small">
+                            <span data-hint="cohens-kappa" style="border-bottom:1px dotted var(--border-color); cursor:help;">Cohen's κ</span> for 2 coders,
+                            <span data-hint="krippendorffs-alpha" style="border-bottom:1px dotted var(--border-color); cursor:help;">Krippendorff's α</span> for 3+
+                        </span>
+                    </div>
+                    <div id="cb-irr-coders" class="mt-2"></div>
+                    <div class="slicer-toolbar mt-1">
+                        <button class="btn-primary" id="btn-cb-irr-run">
+                            <i class="fa-solid fa-play"></i> Compute agreement
+                        </button>
+                        <span id="cb-irr-status" class="muted small"></span>
+                    </div>
+                    <div id="cb-irr-result" class="mt-2"></div>
+                </div>
+            </section>
+
+            <!-- ── AI CODING ───────────────────────────────────────────── -->
+            <section id="page-ai-coding" class="page">
+                <div class="header-section">
+                    <h1>AI Coding</h1>
+                    <p>Let AI apply your codebook to the whole corpus. You'll see a cost estimate before you run, a calibration pass on a sample, and you can override any row you disagree with.</p>
+                </div>
+                <div class="line-draw"></div>
+
+                <!-- Gate: needs codebook + API key + corpus -->
+                <div id="ai-gate-card" class="glass-card" style="display:none;">
+                    <div class="phase-stub">
+                        <span class="stub-tag">Prerequisites</span>
+                        <p id="ai-gate-msg">Set up a codebook, API key, and build a corpus first.</p>
+                        <div class="flex-row mt-2" style="gap:0.5rem; flex-wrap:wrap;">
+                            <button class="btn-secondary" id="btn-ai-go-codebook">
+                                <i class="fa-solid fa-arrow-right"></i> Codebook
+                            </button>
+                            <button class="btn-secondary" id="btn-ai-go-settings">
+                                <i class="fa-solid fa-arrow-right"></i> Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scope + preflight -->
+                <div id="ai-scope-card" class="glass-card" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2>Run setup</h2>
+                        <span class="muted small" id="ai-scope-summary"></span>
+                    </div>
+                    <p class="muted small mt-1">Model: <code>claude-haiku-4-5</code>. Results are cached, so re-running on the same rows with the same codebook costs nothing.</p>
+                    <div class="sample-grid mt-2">
+                        <label class="sample-label">
+                            Scope
+                            <select id="ai-scope-select">
+                                <option value="">Whole corpus</option>
+                            </select>
+                        </label>
+                        <label class="sample-label">
+                            How much to code
+                            <select id="ai-mode">
+                                <option value="sample" selected>Sample (calibrate first)</option>
+                                <option value="full">All rows in scope</option>
+                            </select>
+                        </label>
+                        <label class="sample-label" id="ai-sample-size-wrap">
+                            Sample size <i class="hint-trigger" data-hint="sample-size" tabindex="0" title="What is sample size?">i</i>
+                            <input id="ai-sample-size" type="number" min="10" max="100000" step="50" value="200" />
+                        </label>
+                    </div>
+                    <details class="mt-1">
+                        <summary class="muted small" style="cursor:pointer;">Advanced</summary>
+                        <div class="sample-grid mt-1">
+                            <label class="sample-label">
+                                Batch size (rows per Claude call) <i class="hint-trigger" data-hint="batch-size" tabindex="0" title="What is batch size?">i</i>
+                                <input id="ai-batch-size" type="number" min="1" max="50" step="1" value="20" />
+                            </label>
+                        </div>
+                    </details>
+                    <div class="slicer-toolbar mt-1">
+                        <button class="btn-secondary" id="btn-ai-preflight">
+                            <i class="fa-solid fa-calculator"></i> Estimate cost <i class="hint-trigger" data-hint="preflight" tabindex="0" title="What is preflight?">i</i>
+                        </button>
+                        <button class="btn-primary" id="btn-ai-run" disabled>
+                            <i class="fa-solid fa-play"></i> Run AI coding
+                        </button>
+                        <button class="btn-secondary" id="btn-ai-stop" style="display:none;">
+                            <i class="fa-solid fa-stop"></i> Stop
+                        </button>
+                        <span id="ai-preflight-status" class="muted small"></span>
+                    </div>
+                    <div id="ai-preflight-card" class="mt-2" style="display:none;"></div>
+                </div>
+
+                <!-- Live run -->
+                <div id="ai-run-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2>Live run</h2>
+                        <span class="muted small" id="ai-run-summary"></span>
+                    </div>
+                    <div class="cb-progress-bar mt-2"><div id="ai-progress-fill" class="cb-progress-fill" style="width:0%"></div></div>
+                    <div id="ai-run-log" class="mt-2"></div>
+                    <div id="ai-run-postrun" class="mt-2" style="display:none;"></div>
+                </div>
+
+                <!-- Suggest codebook helper -->
+                <div id="ai-suggest-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2>Suggest a codebook</h2>
+                        <span class="muted small">Sonnet reads a small sample and proposes categories</span>
+                    </div>
+                    <div class="sample-grid mt-2">
+                        <label class="sample-label">
+                            Scope
+                            <select id="ai-sug-scope">
+                                <option value="">Whole corpus</option>
+                            </select>
+                        </label>
+                        <label class="sample-label">
+                            Sample size
+                            <input id="ai-sug-size" type="number" min="10" max="80" step="5" value="40" />
+                        </label>
+                    </div>
+                    <label class="sample-label mt-1" style="display:block;">
+                        What are you trying to identify? (one line)
+                        <input id="ai-sug-goal" type="text" placeholder='e.g. "Distinguish hate speech from legitimate criticism"' />
+                    </label>
+                    <div class="slicer-toolbar mt-1">
+                        <button class="btn-primary" id="btn-ai-suggest-cb">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Suggest codebook
+                        </button>
+                        <span id="ai-suggest-status" class="muted small"></span>
+                    </div>
+                    <div id="ai-suggest-result" class="mt-2"></div>
+                </div>
+
+                <!-- Override / review panel -->
+                <div id="ai-review-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.6rem;">
+                        <div style="flex:1; min-width:240px;">
+                            <h2>Review AI tags</h2>
+                            <p class="muted small mt-1">Every row Claude tagged with the active codebook. <b>Low-<span data-hint="confidence" style="border-bottom:1px dotted var(--border-color); cursor:help;">confidence</span> rows are the most valuable to spot-check</b> — use the toggle to focus on rows Claude wasn't sure about. Click a category to accept the AI tag as your own (so IRR compares you against the AI), or untag to remove it.</p>
+                        </div>
+                        <div class="flex-row" style="gap:0.5rem; flex-wrap:wrap;">
+                            <label class="sample-label inline" style="margin:0;">
+                                <input type="checkbox" id="ai-review-lowconf-only" />
+                                Low-confidence only (&lt; 0.7)
+                            </label>
+                            <button class="btn-secondary" id="btn-ai-review-refresh">
+                                <i class="fa-solid fa-rotate"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div id="ai-review-list" class="mt-2"></div>
+                </div>
+
+                <!-- Cache stats -->
+                <div id="ai-cache-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2>Answer cache</h2>
+                        <span class="muted small">Re-running with the same codebook &amp; rows costs $0 — the cache serves the answers</span>
+                    </div>
+                    <div id="ai-cache-body" class="mt-2"></div>
+                </div>
+            </section>
+
+            <!-- ── TOPICS ──────────────────────────────────────────────── -->
+            <section id="page-topics" class="page">
+                <div class="header-section">
+                    <h1>Topics</h1>
+                    <p>Discover the main themes in your corpus. Step 1 — Claude reads a sample and proposes named topics. Step 2 — every remaining row is classified into one of them (or into an "Other" bucket for anything that doesn't fit). You can rename or merge topics at any point.</p>
+                </div>
+                <div class="line-draw"></div>
+
+                <!-- Prerequisites gate -->
+                <div id="tp-gate-card" class="glass-card" style="display:none;">
+                    <h2>Before you can run topic modelling</h2>
+                    <p class="muted" id="tp-gate-msg"></p>
+                    <div class="slicer-toolbar mt-2">
+                        <button class="btn-secondary" id="btn-tp-go-settings"><i class="fa-solid fa-arrow-right"></i> Settings</button>
+                        <button class="btn-secondary" id="btn-tp-go-corpus"><i class="fa-solid fa-arrow-right"></i> Corpus</button>
+                    </div>
+                </div>
+
+                <!-- Topic sets list -->
+                <div id="tp-list-card" class="glass-card" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2>Topic runs</h2>
+                        <span class="muted small">Each run is its own saved set — keep several side by side.</span>
+                    </div>
+                    <div id="tp-list-body" class="mt-2"></div>
+                </div>
+
+                <!-- Create new topic set -->
+                <div id="tp-create-card" class="glass-card mt-2" style="display:none;">
+                    <h2><span class="step-num">1</span> New topic run</h2>
+                    <p class="muted small mt-1">Name it, pick which rows to sample from, and how many topics you want Claude to find.</p>
+                    <div class="sample-grid mt-2">
+                        <label class="sample-label">
+                            Name
+                            <input type="text" id="tp-new-name" placeholder="e.g. Overall themes" />
+                        </label>
+                        <label class="sample-label">
+                            Scope
+                            <select id="tp-new-scope"><option value="">Whole corpus</option></select>
+                        </label>
+                        <label class="sample-label">
+                            Sample size <i class="hint-trigger" data-hint="sample-size" tabindex="0" title="What is sample size?">i</i>
+                            <input type="number" id="tp-new-sample" min="50" max="500" step="10" value="200" />
+                        </label>
+                        <label class="sample-label">
+                            Target topics <i class="hint-trigger" data-hint="target-k" tabindex="0" title="What is target-k?">i</i>
+                            <input type="number" id="tp-new-targetk" min="3" max="20" step="1" value="8" />
+                        </label>
+                    </div>
+                    <label class="sample-label mt-2" style="display:block;">
+                        Research goal (optional — one line)
+                        <input type="text" id="tp-new-goal" placeholder="e.g. What are people saying about the new policy?" />
+                    </label>
+                    <div class="slicer-toolbar mt-2">
+                        <button class="btn-primary" id="btn-tp-create"><i class="fa-solid fa-plus"></i> Create topic run</button>
+                        <span id="tp-create-msg" class="muted small"></span>
+                    </div>
+                </div>
+
+                <!-- Active run — induction & classification -->
+                <div id="tp-run-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2 id="tp-run-title">Active run</h2>
+                        <span class="muted small" id="tp-run-meta"></span>
+                    </div>
+                    <p class="muted small mt-1"><span class="step-num">2</span> Induce topics — Claude (<code>claude-sonnet-4-6</code>) reads the sample and proposes a named set. &nbsp;<span class="step-num">3</span> Classify scope — every remaining row is sorted into one of those topics (or into <b>Other</b>) using <code>claude-haiku-4-5</code>. Answers are cached so re-runs on the same rows are free.</p>
+
+                    <div class="sample-grid mt-2">
+                        <label class="sample-label">
+                            Classify
+                            <select id="tp-classify-mode">
+                                <option value="full" selected>All rows in scope</option>
+                                <option value="limit">First N rows</option>
+                            </select>
+                        </label>
+                        <label class="sample-label" id="tp-row-limit-wrap" style="display:none;">
+                            N
+                            <input type="number" id="tp-row-limit" min="100" step="100" value="1000" />
+                        </label>
+                    </div>
+                    <details class="mt-1">
+                        <summary class="muted small" style="cursor:pointer;">Advanced</summary>
+                        <div class="sample-grid mt-1">
+                            <label class="sample-label">
+                                Classify batch size
+                                <input type="number" id="tp-batch-size" min="10" max="60" step="5" value="30" />
+                            </label>
+                        </div>
+                    </details>
+
+                    <div class="slicer-toolbar mt-2">
+                        <button class="btn-secondary" id="btn-tp-preflight"><i class="fa-solid fa-calculator"></i> Estimate cost</button>
+                        <button class="btn-primary" id="btn-tp-induce"><i class="fa-solid fa-wand-magic-sparkles"></i> Induce topics</button>
+                        <button class="btn-primary" id="btn-tp-classify"><i class="fa-solid fa-play"></i> Classify scope</button>
+                        <button class="btn-secondary" id="btn-tp-stop" style="display:none;"><i class="fa-solid fa-stop"></i> Stop</button>
+                        <span id="tp-preflight-status" class="muted small"></span>
+                    </div>
+
+                    <div id="tp-preflight-body" class="mt-2" style="display:none;"></div>
+
+                    <div id="tp-progress-wrap" class="mt-2" style="display:none;">
+                        <div class="cb-progress-bar"><div id="tp-progress-fill" class="cb-progress-fill" style="width:0%;"></div></div>
+                        <div id="tp-progress-label" class="muted small mt-1"></div>
+                    </div>
+
+                    <div id="tp-log" class="mt-2"></div>
+                </div>
+
+                <!-- Viewer — topics with counts, keywords, example rows -->
+                <div id="tp-viewer-card" class="glass-card mt-2" style="display:none;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+                        <h2><span class="step-num">4</span> Topics</h2>
+                        <span id="tp-viewer-stats" class="muted small"></span>
+                    </div>
+                    <p class="muted small mt-1">Rename a topic by clicking its title. The <b>Other</b> bucket collects rows that didn't fit any topic — review its examples to see whether you need to add a topic.</p>
+                    <div id="tp-viewer-body" class="mt-2"></div>
+                    <div class="slicer-toolbar mt-2">
+                        <button class="btn-secondary" id="btn-tp-merge" disabled><i class="fa-solid fa-code-merge"></i> Merge selected</button>
+                        <span class="muted small">Tick two or more topics to merge them into one.</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── ANALYTICS ───────────────────────────────────────────── -->
+            <section id="page-analytics" class="page">
+                <div class="header-section">
+                    <h1>Analytics</h1>
+                    <p>Descriptives, volume over time, cross-tabs and top terms — scoped to the whole corpus or a saved slice. Toggle <em>Compare</em> to pit two slices against each other.</p>
+                </div>
+                <div class="line-draw"></div>
+
+                <!-- gate -->
+                <div id="an-gate-card" class="glass-card" style="display:none;">
+                    <p class="muted small" id="an-gate-msg">Build a corpus on the <strong>Corpus</strong> tab first, then come back here.</p>
+                </div>
+
+                <!-- scope picker -->
+                <div id="an-scope-card" class="glass-card" style="display:none;">
+                    <h3>Scope</h3>
+                    <p class="muted small mt-1">Pick a slice (or keep the whole corpus). Turn on compare to analyse two slices side-by-side.</p>
+                    <div class="sample-grid mt-2">
+                        <label class="sample-label">
+                            Slice A
+                            <select id="an-scope-a"></select>
+                        </label>
+                        <label class="sample-label">
+                            <span id="an-scope-a-count" class="muted small">&nbsp;</span>
+                            <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.3rem;">
+                                <input type="checkbox" id="an-compare-toggle"> Compare with another slice
+                            </label>
+                        </label>
+                    </div>
+                    <div class="sample-grid mt-2" id="an-scope-b-row" style="display:none;">
+                        <label class="sample-label">
+                            Slice B
+                            <select id="an-scope-b"></select>
+                        </label>
+                        <label class="sample-label">
+                            <span id="an-scope-b-count" class="muted small">&nbsp;</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- descriptives -->
+                <div id="an-desc-card" class="glass-card mt-2" style="display:none;">
+                    <div class="slicer-toolbar" style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;">
+                        <div>
+                            <h3>Descriptives</h3>
+                            <p class="muted small mt-1" id="an-desc-sub">Row counts, date coverage, unique authors, engagement means, top facets and top authors (both by post count and by summed engagement).</p>
+                        </div>
+                        <button type="button" class="btn-secondary" id="an-desc-csv">Download CSV</button>
+                    </div>
+                    <div id="an-desc-body" class="mt-2"></div>
+                </div>
+
+                <!-- timeseries -->
+                <div id="an-ts-card" class="glass-card mt-2" style="display:none;">
+                    <h3>Volume over time</h3>
+                    <p class="muted small mt-1">Rows (or an engagement metric) bucketed by time. Group by a categorical column to see a stacked breakdown.</p>
+                    <div class="sample-grid mt-2">
+                        <label class="sample-label">
+                            Metric
+                            <select id="an-ts-metric">
+                                <option value="count" selected>Row count</option>
+                                <option value="sum">Sum of…</option>
+                                <option value="mean">Average of…</option>
+                            </select>
+                        </label>
+                        <label class="sample-label" id="an-ts-valuecol-wrap" style="display:none;">
+                            Column
+                            <select id="an-ts-valuecol"></select>
+                        </label>
+                        <label class="sample-label">
+                            Bucket
+                            <select id="an-ts-freq">
+                                <option value="day">Day</option>
+                                <option value="week">Week</option>
+                                <option value="month" selected>Month</option>
+                                <option value="quarter">Quarter</option>
+                                <option value="year">Year</option>
+                            </select>
+                        </label>
+                        <label class="sample-label">
+                            Group by
+                            <select id="an-ts-group"></select>
+                        </label>
+                        <label class="sample-label">
+                            <span>&nbsp;</span>
+                            <button type="button" class="btn-secondary" id="an-ts-csv" style="margin-top:0.3rem;">Download CSV</button>
+                        </label>
+                    </div>
+                    <p class="muted small mt-1" id="an-ts-hint">Sums count every row's value per bucket; averages divide by the number of rows in that bucket.</p>
+                    <div class="mt-2" style="position:relative;height:340px;">
+                        <div id="an-ts-chart-a" style="width:100%;height:100%;"></div>
+                    </div>
+                    <div id="an-ts-wrap-b" class="mt-2" style="position:relative;height:340px;display:none;">
+                        <div id="an-ts-chart-b" style="width:100%;height:100%;"></div>
+                    </div>
+                </div>
+
+                <!-- crosstab -->
+                <div id="an-ct-card" class="glass-card mt-2" style="display:none;">
+                    <h3>Cross-tab</h3>
+                    <p class="muted small mt-1">Count (or share) of rows at every combination of two categorical columns.</p>
+                    <div class="sample-grid mt-2">
+                        <label class="sample-label">
+                            Row
+                            <select id="an-ct-row"></select>
+                        </label>
+                        <label class="sample-label">
+                            Column
+                            <select id="an-ct-col"></select>
+                        </label>
+                        <label class="sample-label">
+                            Normalise <i class="hint-trigger" data-hint="normalisation" tabindex="0" title="What do these options mean?">i</i>
+                            <select id="an-ct-norm">
+                                <option value="">Counts</option>
+                                <option value="row">% of row</option>
+                                <option value="col">% of column</option>
+                                <option value="all">% of total</option>
+                            </select>
+                        </label>
+                        <label class="sample-label">
+                            <span>&nbsp;</span>
+                            <button type="button" class="btn-secondary" id="an-ct-csv" style="margin-top:0.3rem;">Download CSV</button>
+                        </label>
+                    </div>
+                    <p class="muted small mt-1" id="an-ct-hint">Row % shows how each row is distributed across columns. Column % shows how each column is built up from rows. Total % shows each cell's share of the whole.</p>
+                    <div id="an-ct-body" class="mt-2"></div>
+                </div>
+
+                <!-- n-grams -->
+                <div id="an-ng-card" class="glass-card mt-2" style="display:none;">
+                    <h3>Top terms <i class="hint-trigger" data-hint="ngram" tabindex="0" title="What is an n-gram?">i</i></h3>
+                    <p class="muted small mt-1">Most frequent words or phrases in the <code>text</code> column. Pick the <span data-hint="language-stopwords" style="border-bottom:1px dotted var(--border-color); cursor:help;">stopword language</span> that matches your corpus (German, French, etc.) so common words don't dominate the chart.</p>
+                    <div class="sample-grid mt-2">
+                        <label class="sample-label">
+                            Length
+                            <select id="an-ng-n">
+                                <option value="1" selected>Unigrams</option>
+                                <option value="2">Bigrams</option>
+                                <option value="3">Trigrams</option>
+                            </select>
+                        </label>
+                        <label class="sample-label">
+                            Top K
+                            <input type="number" id="an-ng-topk" min="5" max="100" step="5" value="25">
+                        </label>
+                        <label class="sample-label">
+                            Min count
+                            <input type="number" id="an-ng-min" min="1" max="100" step="1" value="2" title="Drop n-grams that appear in fewer than this many rows.">
+                        </label>
+                        <label class="sample-label">
+                            Stopword language <i class="hint-trigger" data-hint="language-stopwords" tabindex="0" title="Which stopword list?">i</i>
+                            <select id="an-ng-lang">
+                                <option value="" selected>Auto (EN + ES + PT)</option>
+                            </select>
+                        </label>
+                        <label class="sample-label">
+                            Extra stopwords <i class="hint-trigger" data-hint="stopwords" tabindex="0" title="What are stopwords?">i</i>
+                            <input type="text" id="an-ng-extra" placeholder="comma-separated, e.g. climate, news">
+                        </label>
+                        <label class="sample-label">
+                            <span>&nbsp;</span>
+                            <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.3rem;">
+                                <input type="checkbox" id="an-ng-stop" checked> Drop stopwords
+                            </label>
+                        </label>
+                        <label class="sample-label">
+                            <span>&nbsp;</span>
+                            <button type="button" class="btn-secondary" id="an-ng-csv" style="margin-top:0.3rem;">Download CSV</button>
+                        </label>
+                    </div>
+                    <div class="mt-2" style="position:relative;height:520px;">
+                        <div id="an-ng-chart-a" style="width:100%;height:100%;"></div>
+                    </div>
+                    <div id="an-ng-wrap-b" class="mt-2" style="position:relative;height:520px;display:none;">
+                        <div id="an-ng-chart-b" style="width:100%;height:100%;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── EXPORT ──────────────────────────────────────────────── -->
+            <section id="page-export" class="page">
+                <div class="header-section">
+                    <h1>Export</h1>
+                    <p>Download a single ZIP with your tagged corpus, codebook, topics, and a readable log of every step — enough for someone else to reproduce the analysis.</p>
+                </div>
+                <div class="line-draw"></div>
+
+                <div class="glass-card">
+                    <div class="phase-stub">
+                        <span class="stub-tag">Reproducibility bundle</span>
+                        <p>The bundle is a ZIP file. Pick which pieces to include — each one is written as a separate file inside the archive so a collaborator can re-open them independently.</p>
+                    </div>
+                    <div id="export-preview-tiles" class="corpus-stats-grid mt-3"></div>
+
+                    <div id="export-warnings" class="mt-2" style="display:none;"></div>
+
+                    <div class="mt-3" style="display:flex; flex-wrap:wrap; gap:1.25rem;">
+                        <label class="export-check"><input type="checkbox" id="ex-corpus-csv" checked> <strong>Corpus (CSV)</strong><span class="muted small"> — every row with `tag`, `ai_tag`, `ai_confidence`, `topic` columns</span></label>
+                        <label class="export-check"><input type="checkbox" id="ex-corpus-xlsx"> <strong>Corpus (XLSX)</strong><span class="muted small"> — same data, Excel format (larger file)</span></label>
+                        <label class="export-check"><input type="checkbox" id="ex-codebooks" checked> <strong>Codebooks</strong><span class="muted small"> — every category and its shortcut key</span></label>
+                        <label class="export-check"><input type="checkbox" id="ex-topics" checked> <strong>Topic runs</strong><span class="muted small"> — induced topics, keywords, row assignments</span></label>
+                        <label class="export-check"><input type="checkbox" id="ex-slices" checked> <strong>Saved slices</strong><span class="muted small"> — queries, samples, composed slices</span></label>
+                        <label class="export-check"><input type="checkbox" id="ex-provenance" checked> <strong>Provenance log</strong><span class="muted small"> — methods-style markdown + raw event JSON</span></label>
+                    </div>
+
+                    <div id="export-bundle-tree" class="mt-2" style="display:none;"></div>
+
+                    <div class="mt-3" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+                        <button id="btn-export-bundle" class="btn-primary">
+                            <i class="fa-solid fa-box-archive"></i> Download bundle (ZIP)
+                        </button>
+                        <span id="export-bundle-status" class="small muted"></span>
+                    </div>
+                </div>
+
+                <div class="glass-card mt-2">
+                    <h3><i class="fa-solid fa-file-arrow-down" style="color:var(--isd-pink); margin-right:0.5rem;"></i>Individual downloads</h3>
+                    <p class="muted small mt-1">If you only need one artifact — for pasting into a paper's methods section, sharing a codebook, or moving the tagged CSV into another tool — grab it here.</p>
+                    <div class="mt-2" style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+                        <a id="dl-corpus-csv" href="/api/export/corpus.csv" class="btn-secondary"><i class="fa-solid fa-file-csv"></i> Corpus CSV</a>
+                        <a id="dl-corpus-xlsx" href="/api/export/corpus.xlsx" class="btn-secondary"><i class="fa-solid fa-file-excel"></i> Corpus XLSX</a>
+                        <a id="dl-codebooks-json" href="/api/export/codebooks.json" class="btn-secondary"><i class="fa-solid fa-code"></i> codebooks.json</a>
+                        <a id="dl-topics-json" href="/api/export/topics.json" class="btn-secondary"><i class="fa-solid fa-code"></i> topics.json</a>
+                        <a id="dl-slices-json" href="/api/export/slices.json" class="btn-secondary"><i class="fa-solid fa-code"></i> slices.json</a>
+                        <a id="dl-provenance-md" href="/api/export/provenance.md" class="btn-secondary"><i class="fa-brands fa-markdown"></i> provenance.md</a>
+                        <a id="dl-provenance-json" href="/api/export/provenance.json" class="btn-secondary"><i class="fa-solid fa-code"></i> provenance.json</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── SETTINGS ────────────────────────────────────────────── -->
+            <section id="page-settings" class="page">
+                <div class="header-section">
+                    <h1>Settings</h1>
+                    <p>AI access and coder identity.</p>
+                </div>
+                <div class="line-draw"></div>
+
+                <div class="glass-card">
+                    <div class="phase-stub">
+                        <span class="stub-tag">Coder identity</span>
+                        <p>Pick a name that will be attached to every tag you place. This makes every code decision traceable back to a specific coder — required before you can tag rows or measure inter-coder agreement.</p>
+                    </div>
+                    <div id="coder-nudge" class="settings-nudge" style="display:none;">
+                        <i class="fa-solid fa-user-pen"></i>
+                        <div>
+                            <strong>Coder name not set.</strong>
+                            <p class="muted small mt-1">Add your name below so every tag you place is traceable back to you. Without it, AI Coding and Codebook tagging are blocked.</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex-col" style="max-width:460px;">
+                        <div>
+                            <label for="s-coder-name">Your name</label>
+                            <input id="s-coder-name" type="text" placeholder="e.g. alice" maxlength="80" />
+                            <div class="flex-row mt-1">
+                                <button id="btn-save-coder" class="btn-primary">Save name</button>
+                                <span id="coder-status" class="small muted"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card mt-2">
+                    <div class="phase-stub">
+                        <span class="stub-tag">Anthropic API key</span>
+                        <p>Paste an Anthropic key to unlock AI features: column-mapping suggestions today, and classification, topic discovery and report writing in later updates. The key stays in memory for this session only — it is never written to disk.</p>
+                    </div>
+                    <div id="apikey-nudge" class="settings-nudge" style="display:none;">
+                        <i class="fa-solid fa-key"></i>
+                        <div>
+                            <strong>No Anthropic key on file.</strong>
+                            <p class="muted small mt-1">AI features (column mapping, codebook suggestions, classification, topic induction, report writing) are disabled until you paste a key. Get one at <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a>.</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex-col" style="max-width:460px;">
+                        <div>
+                            <label for="s-api-key">Anthropic API key</label>
+                            <input id="s-api-key" type="password" placeholder="sk-ant-...">
+                            <div class="flex-row mt-1">
+                                <button id="btn-save-key" class="btn-primary">Save key</button>
+                                <button id="btn-clear-key" class="btn-ghost" type="button" title="Forget the key for this session. To fully revoke it, also disable it on console.anthropic.com.">Forget key</button>
+                                <span id="key-status" class="small muted"></span>
+                            </div>
+                            <p class="muted small mt-2" style="margin-bottom:0;">To fully revoke a key, also disable it at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com/settings/keys</a>. "Forget" here only removes it from this session's memory.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card mt-2">
+                    <div class="phase-stub">
+                        <span class="stub-tag">Monthly AI budget</span>
+                        <p>Set a monthly ceiling (USD) on how much Corpus Intel may spend on Anthropic calls. Preflight estimates subtract from this ceiling — you will see a warning at 80% and a hard block at 100% (bypass requires typing the exact amount). Set to <strong>0</strong> to disable the cap entirely (spending is still tracked, just not blocked).</p>
+                    </div>
+                    <div class="mt-3 flex-col" style="max-width:460px;">
+                        <div>
+                            <label for="s-budget">Monthly budget (USD)</label>
+                            <input id="s-budget" type="number" step="0.50" min="0" placeholder="25.00">
+                            <div class="flex-row mt-1">
+                                <button id="btn-save-budget" class="btn-primary">Save budget</button>
+                                <span id="budget-status" class="small muted"></span>
+                            </div>
+                            <p class="muted small mt-1" style="margin-bottom:0;"><strong>$0</strong> means "no cap" — you'll still see spend in the header pill and in the preflight estimate, but nothing blocks you.</p>
+                            <div id="budget-summary" class="small muted mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Row detail drawer -->
+    <div id="row-drawer-overlay" class="drawer-overlay" style="display:none;"></div>
+    <div id="row-drawer" class="drawer-panel" style="right: -600px;">
+        <div class="drawer-header">
+            <div>
+                <h2 id="row-drawer-title">Row detail</h2>
+                <p class="muted small mt-1" id="row-drawer-subtitle"></p>
+            </div>
+            <button class="icon-btn" id="btn-close-drawer" title="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="drawer-body" id="row-drawer-body"></div>
+    </div>
+
+    <!-- Glossary popover (single shared element, positioned next to hovered trigger) -->
+    <div id="glossary-popover" role="tooltip" hidden>
+        <button class="glossary-dismiss" id="glossary-dismiss" title="Close" aria-label="Close">&times;</button>
+        <div class="glossary-term" id="glossary-term"></div>
+        <div class="glossary-body" id="glossary-body"></div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
