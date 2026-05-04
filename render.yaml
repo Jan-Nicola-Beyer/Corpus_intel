@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: corpus-intel
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn corpus_intel.web_server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false          # prompts you to set this in the Render dashboard
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+    disk:
+      name: corpus-sessions
+      mountPath: /opt/render/project/src/corpus_intel/sessions
+      sizeGB: 1
