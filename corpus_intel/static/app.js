@@ -586,6 +586,19 @@ function qualityFlagText(key, value) {
 }
 
 /* ── 2. ROUTER ──────────────────────────────────────────────────────────── */
+function switchBackgroundVideo(bgId) {
+    if (!bgId) return;
+    $$('.bg-video').forEach(v => {
+        v.classList.remove('bg-video-active');
+        if (v.id !== bgId) v.classList.add('bg-video-hidden');
+    });
+    const next = document.getElementById(bgId);
+    if (next) {
+        next.classList.remove('bg-video-hidden');
+        next.classList.add('bg-video-active');
+    }
+}
+
 function navigateTo(targetPage) {
     if (targetPage === App.currentPage) return;
     // Dispose any page-bound charts left behind and close any EventSources
@@ -596,6 +609,9 @@ function navigateTo(targetPage) {
 
     $$('.page').forEach(p => p.classList.remove('active'));
     $$('.nav-links a').forEach(a => a.classList.toggle('active', a.dataset.page === targetPage));
+
+    const navLink = $(`.nav-links a[data-page="${targetPage}"]`);
+    if (navLink) switchBackgroundVideo(navLink.dataset.bg);
 
     const page = document.getElementById(`page-${targetPage}`);
     if (!page) return;

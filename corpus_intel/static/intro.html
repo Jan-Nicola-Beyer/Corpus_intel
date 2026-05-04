@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Loading…</title>
+  <meta name="robots" content="noindex">
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #faf9f5; overflow: hidden; }
+    iframe { border: 0; width: 100%; height: 100%; display: block; }
+    .skip {
+      position: fixed; top: 14px; right: 18px;
+      background: rgba(15,15,15,0.06); color: #444;
+      border: 0; padding: 7px 14px;
+      border-radius: 18px;
+      font: 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0.04em;
+      cursor: pointer; z-index: 100;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      transition: background 0.2s;
+    }
+    .skip:hover { background: rgba(15,15,15,0.12); }
+    .skip:focus { outline: 2px solid #C8175D; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <iframe src="brand-intro.html" title="Brand intro" aria-hidden="true"></iframe>
+  <button class="skip" onclick="goToApp()" aria-label="Skip intro and open app">skip ›</button>
+  <script>
+    // Animation runs ~10.2s end-to-end; redirect a hair after the final fade.
+    var INTRO_DURATION_MS = 10500;
+    var redirected = false;
+    function goToApp() {
+      if (redirected) return;
+      redirected = true;
+      location.replace('index.html');
+    }
+    setTimeout(goToApp, INTRO_DURATION_MS);
+    // Click anywhere outside the iframe to skip too.
+    document.addEventListener('click', function(e) {
+      if (e.target.tagName !== 'IFRAME') goToApp();
+    });
+  </script>
+</body>
+</html>

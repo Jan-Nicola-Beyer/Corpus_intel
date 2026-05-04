@@ -16,6 +16,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
 </head>
 <body>
+    <!-- ── Background Videos (cross-fade system, matches BC4D/ISD) ── -->
+    <div class="video-background">
+        <video class="bg-video bg-video-active" id="bg-home"     autoplay muted loop playsinline><source src="https://pub-173e2ff12a6940c9a0c46d9538d597bc.r2.dev/home-bg.mp4"     type="video/mp4"></video>
+        <video class="bg-video"                  id="bg-data"    autoplay muted loop playsinline><source src="https://pub-173e2ff12a6940c9a0c46d9538d597bc.r2.dev/data-bg.mp4"     type="video/mp4"></video>
+        <video class="bg-video"                  id="bg-intel"   autoplay muted loop playsinline><source src="https://pub-173e2ff12a6940c9a0c46d9538d597bc.r2.dev/intel-bg.mp4"    type="video/mp4"></video>
+        <video class="bg-video"                  id="bg-settings"autoplay muted loop playsinline><source src="https://pub-173e2ff12a6940c9a0c46d9538d597bc.r2.dev/settings-bg.mp4" type="video/mp4"></video>
+        <div class="video-overlay"></div>
+    </div>
+
     <div class="app-container">
         <nav class="sidebar">
             <div class="brand">
@@ -23,16 +32,16 @@
                 <h2>Corpus Intel</h2>
             </div>
             <ul class="nav-links">
-                <li><a href="#" data-page="home"      class="active"><i class="fa-solid fa-house"></i> <span>Home</span></a></li>
-                <li><a href="#" data-page="import"><i class="fa-solid fa-cloud-arrow-up"></i> <span>Import</span></a></li>
-                <li><a href="#" data-page="corpus"><i class="fa-solid fa-database"></i> <span>Corpus</span></a></li>
-                <li><a href="#" data-page="slicer"><i class="fa-solid fa-filter"></i> <span>Slicer</span></a></li>
-                <li><a href="#" data-page="codebook"><i class="fa-solid fa-book"></i> <span>Codebook</span></a></li>
-                <li><a href="#" data-page="ai-coding"><i class="fa-solid fa-robot"></i> <span>AI Coding</span></a></li>
-                <li><a href="#" data-page="topics"><i class="fa-solid fa-sitemap"></i> <span>Topics</span></a></li>
-                <li><a href="#" data-page="analytics"><i class="fa-solid fa-chart-column"></i> <span>Analytics</span></a></li>
-                <li><a href="#" data-page="export"><i class="fa-solid fa-file-export"></i> <span>Export</span></a></li>
-                <li style="margin-top:auto;"><a href="#" data-page="settings"><i class="fa-solid fa-gear"></i> <span>Settings</span></a></li>
+                <li><a href="#" data-page="home"      data-bg="bg-home"     class="active"><i class="fa-solid fa-house"></i> <span>Home</span></a></li>
+                <li><a href="#" data-page="import"    data-bg="bg-data"><i class="fa-solid fa-cloud-arrow-up"></i> <span>Import</span></a></li>
+                <li><a href="#" data-page="corpus"    data-bg="bg-data"><i class="fa-solid fa-database"></i> <span>Corpus</span></a></li>
+                <li><a href="#" data-page="slicer"    data-bg="bg-data"><i class="fa-solid fa-filter"></i> <span>Slicer</span></a></li>
+                <li><a href="#" data-page="codebook"  data-bg="bg-intel"><i class="fa-solid fa-book"></i> <span>Codebook</span></a></li>
+                <li><a href="#" data-page="ai-coding" data-bg="bg-intel"><i class="fa-solid fa-robot"></i> <span>AI Coding</span></a></li>
+                <li><a href="#" data-page="topics"    data-bg="bg-intel"><i class="fa-solid fa-sitemap"></i> <span>Topics</span></a></li>
+                <li><a href="#" data-page="analytics" data-bg="bg-intel"><i class="fa-solid fa-chart-column"></i> <span>Analytics</span></a></li>
+                <li><a href="#" data-page="export"    data-bg="bg-data"><i class="fa-solid fa-file-export"></i> <span>Export</span></a></li>
+                <li style="margin-top:auto;"><a href="#" data-page="settings" data-bg="bg-settings"><i class="fa-solid fa-gear"></i> <span>Settings</span></a></li>
             </ul>
             <div class="sidebar-footer">
                 <span id="build-status">v0.1 · preview</span>

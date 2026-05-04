@@ -28,8 +28,10 @@ from corpus_intel.constants import (
     APP_NAME,
     APP_VERSION,
     MAX_UPLOAD_BYTES,
+    SESSION_DIR,
     STATIC_DIR,
 )
+from corpus_intel import claude_health
 from corpus_intel.core.filters import FilterSpec, apply_filter, paginate
 from corpus_intel.core.ingest import preview_rows, quality_flags, read_upload
 from corpus_intel.core.merge import build_corpus, corpus_facets
@@ -116,10 +118,30 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
+_PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.dirname(_PACKAGE_DIR)
+
+
+@app.on_event("startup")
+def _startup_health_check() -> None:
+    claude_health.run_startup_check(
+        app_name="Corpus Intel",
+        app_root=_PACKAGE_DIR,
+        required_imports=["anthropic", "fastapi", "pandas", "pydantic"],
+        required_paths=[SESSION_DIR],
+        requirements_file=os.path.join(_REPO_ROOT, "requirements.txt"),
+    )
+
+
+@app.get("/health")
+def health() -> JSONResponse:
+    return JSONResponse(claude_health.health_report())
+
+
 # ─── Index ──────────────────────────────────────────────────────────────────
 @app.get("/")
 def index() -> FileResponse:
-    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+    return FileResponse(os.path.join(STATIC_DIR, "intro.html"))
 
 
 # ─── State ──────────────────────────────────────────────────────────────────
