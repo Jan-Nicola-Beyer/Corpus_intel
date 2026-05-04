@@ -1289,6 +1289,8 @@ function renderMapping(data) {
     const card = $('#mapping-card');
     if (!card) return;
     card.style.display = 'block';
+    const btnNext = $('#btn-go-to-corpus');
+    if (btnNext) btnNext.style.display = 'none';
     const meta = data.meta;
     $('#mapping-title').textContent = `Column mapping · ${meta.original_filename}`;
     const conf = Math.round((meta.source_confidence ?? 0) * 100);
@@ -1381,6 +1383,8 @@ async function saveMapping() {
                   : 'Mapping saved. Head to the Corpus tab to combine your mapped datasets into a working corpus.',
                 'ok'
             );
+            const btnNext = $('#btn-go-to-corpus');
+            if (btnNext) btnNext.style.display = 'inline-flex';
         } else {
             const friendly = problems.map(p => {
                 if (p.startsWith('missing_required:')) {
@@ -1641,12 +1645,18 @@ function renderCorpusSummary(state) {
     const currentIds = new Set(Object.keys(state?.datasets || {}));
     const missing = (c.source_dataset_ids || []).filter(id => !currentIds.has(id));
 
-    const baseLine = `${formatInt(rows)} rows from ${formatInt(stats.datasets || 0)} dataset${(stats.datasets||0)===1?'':'s'} · built ${builtAt}`;
+    let baseLine = `${formatInt(rows)} rows from ${formatInt(stats.datasets || 0)} dataset${(stats.datasets||0)===1?'':'s'} · built ${builtAt}`;
+    
+    const dupsRemoved = (stats.near_text_duplicates || 0) + (stats.exact_post_id_duplicates || 0);
+    if (dupsRemoved > 0) {
+        baseLine += ` <span class="badge badge-warn" style="margin-left:0.5rem;"><i class="fa-solid fa-scissors"></i> ${formatInt(dupsRemoved)} duplicates removed</span>`;
+    }
+
     const line = $('#corpus-summary-line');
     if (missing.length) {
-        line.innerHTML = `${escapeHtml(baseLine)}<br><span class="badge badge-warn mt-1" style="margin-top:0.4rem;"><i class="fa-solid fa-triangle-exclamation"></i> ${missing.length} source dataset${missing.length===1?'':'s'} removed since this corpus was built — rebuild to refresh.</span>`;
+        line.innerHTML = `${baseLine}<br><span class="badge badge-warn mt-1" style="margin-top:0.4rem;"><i class="fa-solid fa-triangle-exclamation"></i> ${missing.length} source dataset${missing.length===1?'':'s'} removed since this corpus was built — rebuild to refresh.</span>`;
     } else {
-        line.textContent = baseLine;
+        line.innerHTML = baseLine;
     }
 
     const removedExact = stats.exact_post_id_duplicates || 0;
@@ -3692,6 +3702,12 @@ function renderCodebookEditor(state, cb) {
             btn.addEventListener('click', () => removeCategory(btn.dataset.catRemove));
         });
     }
+
+    // Populate Regex category dropdown
+    const regexCat = $('#cb-regex-category');
+    if (regexCat) {
+        regexCat.innerHTML = cb.categories.map(c => `<option value="${escapeHtml(c.cat_id)}">${escapeHtml(c.title)}</option>`).join('');
+    }
 }
 
 function codebookWarnings(cb) {
@@ -3720,6 +3736,129 @@ function renderScopePicker(state) {
     // Lazy-load scope rows if we don't have them yet and a row hasn't been focused.
     if (App.codebook.scopeRows.length === 0 && state.corpus?.built) {
         loadScopeRows();
+    }
+}
+
+/* ── STANDARD CODEBOOK LIBRARY & REGEX PRE-CODING ──────────────────────── */
+const STANDARD_LIBRARY = [
+    {
+        id: 'un-hate-speech',
+        title: 'UN Hate Speech Framework',
+        desc: 'Based on UN guidelines for distinguishing severe hate speech from offensive or legitimate speech.',
+        categories: [
+            { cat_id: 'hs_severe', title: 'Severe Hate Speech', description: 'Direct incitement to violence or discrimination against a protected group.', shortcut_key: '1', color: '#c91432', exclusion_group: 'type' },
+            { cat_id: 'hs_offensive', title: 'Offensive Speech', description: 'Insulting or derogatory language that does not reach the threshold of hate speech.', shortcut_key: '2', color: '#f78f1e', exclusion_group: 'type' },
+            { cat_id: 'hs_legit', title: 'Legitimate Expression', description: 'Political commentary, criticism, or general discussion without hate speech indicators.', shortcut_key: '3', color: '#108a00', exclusion_group: 'type' }
+        ]
+    },
+    {
+        id: 'sentiment-basic',
+        title: 'Basic Sentiment Analysis',
+        desc: 'Standard three-way sentiment classification.',
+        categories: [
+            { cat_id: 'sent_pos', title: 'Positive', description: 'Expresses a favorable or positive opinion.', shortcut_key: 'p', color: '#108a00', exclusion_group: 'sentiment' },
+            { cat_id: 'sent_neu', title: 'Neutral', description: 'Objective statement or lacking clear sentiment.', shortcut_key: 'n', color: '#666666', exclusion_group: 'sentiment' },
+            { cat_id: 'sent_neg', title: 'Negative', description: 'Expresses an unfavorable or negative opinion.', shortcut_key: 'm', color: '#c91432', exclusion_group: 'sentiment' }
+        ]
+    }
+];
+
+function setupCodebookLibrary() {
+    const btn = $('#btn-cb-library');
+    const modal = $('#cb-library-modal');
+    const closeBtn = $('#cb-library-close');
+    const mask = $('#cb-library-close-mask');
+    const grid = $('#cb-library-grid');
+    if (!btn || !modal) return;
+    
+    grid.innerHTML = STANDARD_LIBRARY.map(lib => `
+        <div class="glass-card flex-row" style="justify-content:space-between; align-items:center; padding:1rem;">
+            <div>
+                <strong>${escapeHtml(lib.title)}</strong>
+                <p class="muted small" style="margin:0.25rem 0 0 0;">${escapeHtml(lib.desc)}</p>
+                <div class="muted small mt-1">${lib.categories.length} categories</div>
+            </div>
+            <button class="btn-primary btn-sm btn-load-lib" data-lib="${lib.id}">Use this</button>
+        </div>
+    `).join('');
+    
+    grid.querySelectorAll('.btn-load-lib').forEach(b => {
+        b.addEventListener('click', async () => {
+            const lib = STANDARD_LIBRARY.find(x => x.id === b.dataset.lib);
+            if (!lib) return;
+            modal.hidden = true;
+            await loadStandardCodebook(lib);
+        });
+    });
+
+    btn.addEventListener('click', () => modal.hidden = false);
+    closeBtn.addEventListener('click', () => modal.hidden = true);
+    mask.addEventListener('click', () => modal.hidden = true);
+}
+
+async function loadStandardCodebook(lib) {
+    try {
+        const payload = {
+            name: lib.title,
+            goal: lib.desc,
+            categories: lib.categories
+        };
+        const resp = await fetchJson('/api/codebooks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        App.state.active_codebook = resp.codebook.codebook_id;
+        await refreshState();
+        renderCodebook(App.state);
+    } catch (err) {
+        alert('Failed to load codebook: ' + err.message);
+    }
+}
+
+function setupRegexPrecoding() {
+    $('#btn-cb-run-regex')?.addEventListener('click', runRegexPrecoding);
+}
+
+async function runRegexPrecoding() {
+    const pattern = $('#cb-regex-pattern')?.value.trim();
+    const catId = $('#cb-regex-category')?.value;
+    const status = $('#cb-regex-status');
+    if (!pattern || !catId) {
+        if(status) status.textContent = 'Please provide a pattern and select a category.';
+        return;
+    }
+    
+    const state = App.state;
+    const coder = state.coding?.coder_name;
+    if (!coder) { alert('Set your coder name in Settings first.'); return; }
+    
+    const cb = activeCodebook(state);
+    if (!cb) return;
+    
+    if (status) status.textContent = 'Running auto-tag...';
+    
+    try {
+        const query = pattern;
+        const data = await fetchJson('/api/coding/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cat_id: catId,
+                query: query,
+                dry_run: false
+            })
+        });
+        
+        if (status) {
+            status.innerHTML = `<span style="color:var(--isd-blue);"><i class="fa-solid fa-check"></i> Success! Tagged ${formatInt(data.patch ? Object.keys(data.patch).length : 0)} rows.</span>`;
+            setTimeout(() => { if(status) status.textContent = ''; }, 5000);
+        }
+        await refreshState();
+        await loadProgress();
+        renderCodebook(App.state);
+    } catch (err) {
+        if (status) status.textContent = 'Auto-tag failed: ' + err.message;
     }
 }
 
@@ -6446,10 +6585,15 @@ async function init() {
     // Glossary tooltip — global triggers
     setupGlossary();
 
+    // Standard Library & Regex Pre-Coding
+    setupCodebookLibrary();
+    setupRegexPrecoding();
+
     // Upload + mapping wiring
     setupUpload();
     $('#btn-save-mapping')?.addEventListener('click', saveMapping);
     $('#btn-ai-suggest')?.addEventListener('click', aiSuggest);
+    $('#btn-go-to-corpus')?.addEventListener('click', () => navigateTo('corpus'));
 
     // Settings
     $('#btn-save-key')?.addEventListener('click', saveApiKey);

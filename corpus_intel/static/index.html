@@ -244,19 +244,30 @@
 
                 <!-- Active mapping editor -->
                 <div id="mapping-card" class="glass-card mt-2" style="display:none;">
+                    <div class="glass-card mb-2" style="background:rgba(240,248,255,0.5); border-left:4px solid var(--isd-blue); padding:0.7rem 0.95rem;">
+                        <div class="flex-row" style="gap:0.5rem; align-items:center; margin-bottom:0.25rem;">
+                            <i class="fa-solid fa-lightbulb" style="color:var(--isd-blue);"></i>
+                            <strong>Cost-Saving Tip: Deterministic Mapping</strong>
+                        </div>
+                        <p class="muted small" style="margin:0;">Manually map your columns or pick a preset to save AI costs. Use "Suggest with AI" only as a fallback.</p>
+                    </div>
+
                     <div class="flex-row" style="justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem;">
                         <div style="flex:1; min-width:240px;">
                             <h2 id="mapping-title">Column mapping</h2>
                             <p class="muted small mt-1" id="mapping-subtitle"></p>
                         </div>
-                        <div class="flex-row">
-                            <label class="small muted" style="margin-bottom:0;" for="source-picker">Detected as:</label>
-                            <select id="source-picker" style="width:auto; min-width:180px;"></select>
-                            <button id="btn-ai-suggest" class="btn-secondary">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i> Suggest with AI
+                        <div class="flex-row" style="align-items:center;">
+                            <label class="small muted" style="margin-bottom:0; margin-right:0.5rem;" for="source-picker">Preset:</label>
+                            <select id="source-picker" style="width:auto; min-width:140px; margin-right:0.5rem;"></select>
+                            <button id="btn-ai-suggest" class="btn-ghost small" style="color:var(--text-muted);" title="Costs API credits">
+                                <i class="fa-solid fa-coins"></i> AI Suggest
                             </button>
                             <button id="btn-save-mapping" class="btn-primary">
                                 <i class="fa-solid fa-check"></i> Save mapping
+                            </button>
+                            <button id="btn-go-to-corpus" class="btn-primary" style="display:none; background: var(--isd-pink); border-color: var(--isd-pink);">
+                                Next: Build Corpus <i class="fa-solid fa-arrow-right"></i>
                             </button>
                         </div>
                     </div>
@@ -701,15 +712,14 @@
                 <div class="line-draw"></div>
 
                 <!-- No-coder banner -->
-                <div id="cb-coder-banner" class="glass-card" style="display:none;">
-                    <div class="phase-stub">
-                        <span class="stub-tag">Sign in as a coder</span>
-                        <p>Every tag is stamped with the coder who placed it — so before you can code, you need to set your name in <strong>Settings</strong>. This is what makes inter-coder agreement possible.</p>
-                        <div class="mt-2">
-                            <button class="btn-secondary" id="btn-cb-go-settings">
-                                <i class="fa-solid fa-arrow-right"></i> Open Settings
-                            </button>
+                <div id="cb-coder-banner" class="glass-card mb-2" style="display:none; border-left:4px solid var(--warn); background:rgba(255,247,230,0.55); padding:0.65rem 0.9rem;">
+                    <div class="flex-row" style="justify-content:space-between; align-items:center;">
+                        <div style="flex:1;">
+                            <i class="fa-solid fa-triangle-exclamation" style="color:var(--warn); margin-right:0.4rem;"></i>
+                            <strong>Coder name missing.</strong>
+                            <span class="muted small" style="margin-left:0.5rem;">You can build and view codebooks, but you cannot tag rows until you set your name in Settings.</span>
                         </div>
+                        <button class="btn-secondary btn-sm" id="btn-cb-go-settings-inline">Open Settings</button>
                     </div>
                 </div>
 
@@ -720,8 +730,11 @@
                         <p>A codebook is the set of categories you will tag rows with (e.g. <em>hate speech, harassment, misinformation, legitimate</em>). Use the starter preset to get moving, or create your own from scratch.</p>
                     </div>
                     <div class="flex-row mt-2" style="flex-wrap:wrap; gap:0.6rem;">
-                        <button class="btn-primary" id="btn-cb-preset">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> Use hate-speech starter
+                        <button class="btn-primary" id="btn-cb-library">
+                            <i class="fa-solid fa-book-bookmark"></i> Browse Standard Library
+                        </button>
+                        <button class="btn-ghost" id="btn-cb-preset" title="Costs API credits">
+                            <i class="fa-solid fa-coins"></i> AI Suggest Codebook
                         </button>
                         <button class="btn-secondary" id="btn-cb-new-empty">
                             <i class="fa-solid fa-plus"></i> Create empty codebook
@@ -730,6 +743,26 @@
                             <i class="fa-solid fa-file-arrow-up"></i> Import JSON
                         </button>
                         <input type="file" id="cb-import-file" accept=".json,application/json" style="display:none;" />
+                    </div>
+                </div>
+
+                <!-- Standard Library Modal -->
+                <div id="cb-library-modal" class="decision-modal" hidden>
+                    <div class="decision-modal-mask" id="cb-library-close-mask"></div>
+                    <div class="decision-modal-window" role="dialog" aria-modal="true" style="max-width: 600px;">
+                        <header class="decision-modal-head">
+                            <i class="fa-solid fa-book-bookmark"></i>
+                            <h3>Standard Codebook Library</h3>
+                        </header>
+                        <div class="decision-modal-body">
+                            <p class="muted small mb-2">Cost-Saving Tip: Standard frameworks cost nothing to create and are great starting points.</p>
+                            <div class="goal-grid" id="cb-library-grid" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <!-- populated via JS -->
+                            </div>
+                        </div>
+                        <footer class="decision-modal-foot">
+                            <button type="button" class="btn-ghost" id="cb-library-close">Close</button>
+                        </footer>
                     </div>
                 </div>
 
@@ -808,6 +841,32 @@
                             <i class="fa-solid fa-plus"></i> Add category
                         </button>
                         <span id="cb-add-status" class="muted small"></span>
+                    </div>
+
+                    <!-- Cost-Saving: Regex Pre-Coding -->
+                    <div class="glass-card mt-3" style="background:rgba(240,248,255,0.5); border-left:4px solid var(--isd-blue); padding:0.7rem 0.95rem;">
+                        <div class="flex-row" style="gap:0.5rem; align-items:center; margin-bottom:0.25rem;">
+                            <i class="fa-solid fa-lightbulb" style="color:var(--isd-blue);"></i>
+                            <strong>Cost-Saving Tip: Regex Auto-Tagging</strong>
+                        </div>
+                        <p class="muted small mb-2">Tag obvious rows for free using text matching. This reduces the number of rows you need to send to the AI for expensive bulk coding.</p>
+                        
+                        <div class="sample-grid">
+                            <label class="sample-label">
+                                Regex pattern (case-insensitive)
+                                <input id="cb-regex-pattern" type="text" placeholder="e.g. climate hoax|scam" />
+                            </label>
+                            <label class="sample-label">
+                                Apply Category
+                                <select id="cb-regex-category"></select>
+                            </label>
+                        </div>
+                        <div class="slicer-toolbar mt-1">
+                            <button class="btn-primary" id="btn-cb-run-regex">
+                                <i class="fa-solid fa-bolt"></i> Run Auto-Tag
+                            </button>
+                            <span id="cb-regex-status" class="muted small"></span>
+                        </div>
                     </div>
                 </div>
 
@@ -1093,6 +1152,16 @@
                         <span class="muted small">Each run is its own saved set — keep several side by side.</span>
                     </div>
                     <div id="tp-list-body" class="mt-2"></div>
+                </div>
+
+                <!-- Cost-Saving: Thematic Overview -->
+                <div class="glass-card mt-2" style="background:rgba(240,248,255,0.5); border-left:4px solid var(--isd-blue); padding:0.7rem 0.95rem;">
+                    <div class="flex-row" style="gap:0.5rem; align-items:center; margin-bottom:0.25rem;">
+                        <i class="fa-solid fa-lightbulb" style="color:var(--isd-blue);"></i>
+                        <strong>Cost-Saving Tip: Free Thematic Overview</strong>
+                    </div>
+                    <p class="muted small mb-2">Before running expensive AI Topic Induction, you can get a free thematic overview using keyword extraction (N-grams) in the Analytics tab.</p>
+                    <button class="btn-secondary btn-sm" onclick="document.querySelector('.nav-links a[data-page=\'analytics\']').click()">Go to Analytics</button>
                 </div>
 
                 <!-- Create new topic set -->
