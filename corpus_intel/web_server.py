@@ -16,7 +16,7 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -140,8 +140,8 @@ def health() -> JSONResponse:
 
 # ─── Index ──────────────────────────────────────────────────────────────────
 @app.get("/")
-def index() -> FileResponse:
-    return FileResponse(os.path.join(STATIC_DIR, "intro.html"))
+def index() -> RedirectResponse:
+    return RedirectResponse(url="/static/intro.html")
 
 
 # ─── State ──────────────────────────────────────────────────────────────────
